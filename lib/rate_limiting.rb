@@ -90,10 +90,11 @@ class RateLimiting
   end
 
   def logger
-    @logger || Rack::NullLogger.new(nil)
+    @logger || Rails.logger
   end
 
   def allowed?(request)
+    logger.debug "REQ: #{request.host} #{request.path} #{request.params} #{request.url}"
     if rule = find_matching_rule(request)
       logger.debug "[#{self}] #{request.ip}:#{request.path}: Rate limiting rule matched."
       apply_rule(request, rule)
@@ -104,7 +105,8 @@ class RateLimiting
 
   def find_matching_rule(request)
     @rules.each do |rule|
-      return rule if request.path =~ rule.match
+      logger.debug "RULE: #{rule.inspect} #{rule.match}"
+      return rule if request.host =~ rule.match || request.path =~ rule.match
     end
     nil
   end
