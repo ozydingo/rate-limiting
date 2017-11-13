@@ -96,7 +96,7 @@ class RateLimiting
   def allowed?(request)
     logger.debug "REQ: #{request.host} #{request.path} #{request.params} #{request.url}"
     if rule = find_matching_rule(request)
-      logger.debug "[#{self}] #{request.ip}:#{request.path}: Rate limiting rule matched."
+      logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limiting rule matched."
       apply_rule(request, rule)
     else
       true
@@ -115,7 +115,7 @@ class RateLimiting
     key = rule.get_key(request)
     if cache_has?(key)
       record = cache_get(key)
-      logger.debug "[#{self}] #{request.ip}:#{request.path}: Rate limiting entry: '#{key}' => #{record}"
+      logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limiting entry: '#{key}' => #{record}"
       if (reset = Time.at(record.split(':')[1].to_i)) > Time.now
         # rule hasn't been reset yet
         times = record.split(':')[0].to_i
@@ -124,7 +124,7 @@ class RateLimiting
           # within rate limit
           response = get_header(times + 1, reset, rule.limit)
         else
-          logger.debug "[#{self}] #{request.ip}:#{request.path}: Rate limited; request rejected."
+          logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limited; request rejected."
           return false
         end
       else
