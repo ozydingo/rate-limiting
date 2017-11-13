@@ -94,9 +94,9 @@ class RateLimiting
   end
 
   def allowed?(request)
-    logger.debug "REQ: #{request.host} #{request.path} #{request.params} #{request.url}"
+    logger.debug "Rate Limit REQ: #{request.host} #{request.path} #{request.params} #{request.url}"
     if rule = find_matching_rule(request)
-      logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limiting rule matched."
+      logger.info "Rate Limit MATCH: #{request.url}"
       apply_rule(request, rule)
     else
       true
@@ -105,17 +105,20 @@ class RateLimiting
 
   def find_matching_rule(request)
     @rules.each do |rule|
-      logger.debug "RULE: #{rule.inspect} #{rule.match}"
-      return rule if request.host =~ rule.match || request.path =~ rule.match
+      logger.debug "Rate Limit RULE: #{rule.inspect}"
+      match_host = request.host =~ rule.match
+      match_path = request.path =~ rule.match
+      match_token = (rule.token && rule.token != :capture) ? request.params.keys.map(&:to_sym).include?(rule.token) : true
+      return rule if match_token && (match_host || match_path)
     end
-    nil
+    return nil
   end
 
   def apply_rule(request, rule)
     key = rule.get_key(request)
     if cache_has?(key)
       record = cache_get(key)
-      logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limiting entry: '#{key}' => #{record}"
+      logger.info "Rate Limit ENTRY #{request.url}: '#{key}' => #{record}"
       if (reset = Time.at(record.split(':')[1].to_i)) > Time.now
         # rule hasn't been reset yet
         times = record.split(':')[0].to_i
@@ -124,7 +127,7 @@ class RateLimiting
           # within rate limit
           response = get_header(times + 1, reset, rule.limit)
         else
-          logger.info "[#{self}] #{request.ip}:#{request.path}: Rate limited; request rejected."
+          logger.info "Rate Limit REJECT #{request.url}: request rejected."
           return false
         end
       else

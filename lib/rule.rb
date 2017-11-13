@@ -22,6 +22,10 @@ class Rule
     (@options[:type] == :frequency ? 1 : @options[:limit])
   end
 
+  def token
+    @options[:token]
+  end
+
   def get_expiration
     (Time.now + ( @options[:type] == :frequency ? get_frequency : get_fixed ))
   end
@@ -51,7 +55,13 @@ class Rule
   def get_key(request)
     key = (@options[:per_url] ? request.path : @options[:match].to_s)
     key = key + request.ip.to_s if @options[:per_ip]
-    key = key + request.params[@options[:token].to_s] if @options[:token]
+    if token == :capture
+      if matchdata = (request.host.match(match) || request.path.match(match))
+        key = key + matchdata.captures.join("~")
+      end
+    elsif token
+      key = key + request.params[token.to_s]
+    end
     key
   end
 end
