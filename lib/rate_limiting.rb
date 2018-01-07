@@ -108,8 +108,9 @@ class RateLimiting
       logger.debug "Rate Limit RULE: #{rule.inspect}"
       match_host = request.host =~ rule.match
       match_path = request.path =~ rule.match
+      match_url = request.url =~ rule.match
       match_token = (rule.token && rule.token != :capture) ? request.params.keys.map(&:to_sym).include?(rule.token) : true
-      return rule if match_token && (match_host || match_path)
+      return rule if match_token && (match_host || match_path || match_url)
     end
     return nil
   end
