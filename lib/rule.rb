@@ -60,9 +60,8 @@ class Rule
         key = key + matchdata.captures.join("~")
       end
     elsif token
-      key = key + request.params[token.to_s]
+      key = key + request.params[token.to_s].to_s
     end
     key
   end
 end
-
